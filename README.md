@@ -19,12 +19,28 @@ This image is built on Docker Hub automatically any time the upstream OS contain
 ## How to Use
 
 1. [Install Docker](https://docs.docker.com/engine/installation/).
-2. Pull this image from Docker Hub: `docker pull pluggero/docker-ubuntu2404-ansible:latest` (or use the image you built earlier, e.g. `docker-ubuntu2404-ansible:latest`).
-3. Run a container from the image: `docker run --name test-container -d --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host pluggero/docker-ubuntu2404-ansible:latest` (to test my Ansible roles, I add in a volume mounted from the current working directory with ``--volume=`pwd`:/etc/ansible/roles/role_under_test:ro``).
-   - **NOTE**: It should be avoided to mount your workstations cgroup volume with read-write permissions as it can break your session. Only use this inside of a virtual machine.
+2. Pull this image from Docker Hub (or use the image you built earlier, e.g. `docker-ubuntu2404-ansible:latest`):
+
+```
+docker pull pluggero/docker-ubuntu2404-ansible:latest
+```
+
+3. Run a container from the image:
+
+```
+docker run --name test-container -d --privileged -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host pluggero/docker-ubuntu2404-ansible:latest`
+```
+
+- **NOTE**: To test my Ansible roles, I add in a volume mounted from the current working directory with ``--volume=`pwd`:/etc/ansible/roles/role_under_test:ro``).
+
+- **NOTE**: It should be avoided to mount your workstations cgroup volume with read-write permissions as it can break your session. Only use this inside of a virtual machine.
+
 4. Use Ansible inside the container:
-   a. `docker exec --tty test-container env TERM=xterm ansible --version`
-   b. `docker exec --tty test-container env TERM=xterm ansible-playbook /path/to/ansible/playbook.yml --syntax-check`
+
+```
+docker exec --tty test-container env TERM=xterm ansible --version`
+docker exec --tty test-container env TERM=xterm ansible-playbook /path/to/ansible/playbook.yml --syntax-check
+```
 
 ## Notes
 
