@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/pluggero/docker-ubuntu2404-ansible/actions/workflows/build.yml/badge.svg)](https://github.com/pluggero/docker-ubuntu2404-ansible/actions/workflows/build.yml) [![Docker pulls](https://img.shields.io/docker/pulls/pluggero/docker-ubuntu2404-ansible.svg?maxAge=2592000)](https://hub.docker.com/r/pluggero/docker-ubuntu2404-ansible/)
 
-Rocky Linux 9 Docker container for Ansible playbook and role testing.
+Ubuntu 24.04 LTS Docker container for Ansible playbook and role testing.
 
 ## Tags
 
