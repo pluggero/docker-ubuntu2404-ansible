@@ -23,11 +23,12 @@ RUN apt-get update \
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-# Remove useless Python environment warning flag.
-RUN sudo rm -rf /usr/lib/python3.12/EXTERNALLY-MANAGED
+# Allow installing stuff to system Python.
+RUN rm -f /usr/lib/python3.11/EXTERNALLY-MANAGED
 
-# Install Ansible via Pip.
-RUN pip3 install $pip_packages
+# Install Ansible via Pip with system packages override
+RUN pip3 install --break-system-packages --upgrade pip
+RUN pip3 install --break-system-packages $pip_packages
 
 # Create ansible user with home directory
 RUN useradd -m -s /bin/bash ansible \
