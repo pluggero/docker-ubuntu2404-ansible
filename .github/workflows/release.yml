@@ -1,0 +1,138 @@
+---
+name: Build and Release
+
+on:
+  schedule:
+    # Run every Sunday at 1 AM UTC
+    - cron: "0 1 * * 0"
+  workflow_dispatch:
+
+env:
+  PACKER_OUTPUT: packer/outputs/ubuntu2404-ansible.tar
+  REGISTRY: pluggero
+  IMAGE_NAME: docker-ubuntu2404-ansible
+
+jobs:
+  lint:
+    name: Lint
+    uses: ./.github/workflows/_lint.yml
+
+  build:
+    name: Build
+    uses: ./.github/workflows/_build.yml
+    needs: lint
+    with:
+      upload-artifact: true
+
+  release:
+    name: Release to Docker Hub
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Download image artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: docker-image
+          path: ./image
+
+      - name: Set Release Version
+        id: set_version
+        run: |
+          # Use YYYY.MM.DD format for version
+          VERSION=$(date -u +"%Y.%m.%d")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get commit SHA and workflow URL
+        id: build_metadata
+        run: |
+          echo "commit_sha=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+          echo "workflow_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> $GITHUB_OUTPUT
+
+      - name: Load and push Docker image
+        id: push
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.set_version.outputs.version }}"
+          FULL_IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+
+          echo "Loading Docker image from artifact..."
+          docker load -i ./image/ubuntu2404-ansible.tar
+
+          echo "Tagging image with version ${VERSION} as latest..."
+          docker tag "${FULL_IMAGE_NAME}:${VERSION}" "${FULL_IMAGE_NAME}:latest"
+
+          echo "Pushing ${FULL_IMAGE_NAME}:${VERSION}..."
+          docker push "${FULL_IMAGE_NAME}:${VERSION}"
+
+          echo "Pushing ${FULL_IMAGE_NAME}:latest..."
+          docker push "${FULL_IMAGE_NAME}:latest"
+
+          # Get the digest from the pushed image
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${FULL_IMAGE_NAME}:${VERSION}" | cut -d'@' -f2)
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+
+          echo "Release completed successfully!"
+
+      - name: Generate checksums file
+        id: checksums
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.set_version.outputs.version }}"
+          FULL_IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          DIGEST="${{ steps.push.outputs.digest }}"
+
+          echo "Creating checksums file with metadata..."
+          {
+            echo "Image: ${FULL_IMAGE_NAME}:${VERSION}"
+            echo "Digest: ${DIGEST}"
+            echo ""
+            echo "Build Metadata"
+            echo "- Version: $VERSION"
+            echo "- Git commit: ${{ steps.build_metadata.outputs.commit_sha }}"
+            echo "- Workflow run: ${{ steps.build_metadata.outputs.workflow_url }}"
+            echo "- Build date: $(date --utc +"%Y-%m-%d %H:%M:%S UTC")"
+            echo ""
+            echo "Repository: ${{ github.server_url }}/${{ github.repository }}"
+          } > ./image/checksums.txt
+          echo "Checksums file created."
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: ./image/checksums.txt
+
+      - name: Upload checksums as artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: checksums-${{ steps.set_version.outputs.version }}
+          path: ./image/checksums.txt
+
+  tag:
+    name: Create and Push Tag
+    uses: ./.github/workflows/_tag.yml
+    needs: release
+    permissions:
+      contents: write
+    secrets:
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+    with:
+      version: ${{ needs.release.outputs.version }}
