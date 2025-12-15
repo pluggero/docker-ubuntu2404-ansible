@@ -1,0 +1,17 @@
+---
+- name: Ubuntu2404 provisioning
+  hosts: all
+  gather_facts: true
+
+  vars_files:
+    - ../vars/upgrade.yml
+    - ../vars/common_pkgs.yml
+    - ../vars/user_setup.yml
+    - ../vars/python.yml
+
+  roles:
+    - pluggero.upgrade
+    - pluggero.common_pkgs
+    - pluggero.user_setup
+    - pluggero.python
+    - initctl_faker

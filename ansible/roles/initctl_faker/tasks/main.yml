@@ -1,0 +1,17 @@
+---
+- name: Copy initctl_faker script
+  ansible.builtin.copy:
+    src: initctl_faker
+    dest: /initctl_faker
+    mode: "0755"
+
+- name: Remove existing /sbin/initctl
+  ansible.builtin.file:
+    path: /sbin/initctl
+    state: absent
+
+- name: Create symlink for initctl_faker
+  ansible.builtin.file:
+    src: /initctl_faker
+    dest: /sbin/initctl
+    state: link

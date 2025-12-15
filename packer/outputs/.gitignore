@@ -1,0 +1,8 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+# Except initctl_faker role
+!initctl_faker/
+!initctl_faker/**
+

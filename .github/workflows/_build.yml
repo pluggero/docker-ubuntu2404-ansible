@@ -1,0 +1,62 @@
+---
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      upload-artifact:
+        description: "Whether to upload the built artifact"
+        type: boolean
+        default: false
+    outputs:
+      artifact-name:
+        description: "The name of the uploaded artifact"
+        value: docker-image
+
+env:
+  PACKER_OUTPUT: packer/outputs/ubuntu2404-ansible.tar
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Set up Python 3
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@1aa358be5cf73883762b302a3a03abd66e75b232 # v3
+
+      - name: Verify Packer installation
+        run: packer --version
+
+      - name: Make builder script executable
+        run: chmod +x ./scripts/ubuntu2404_builder.sh
+
+      - name: Build the Docker image
+        run: ./scripts/ubuntu2404_builder.sh
+
+      - name: Verify image file created
+        run: |
+          if [ ! -f "${{ env.PACKER_OUTPUT }}" ]; then
+            echo "Image file not found!"
+            exit 1
+          fi
+          echo "Image file found: ${{ env.PACKER_OUTPUT }}"
+
+      - name: Upload image artifact
+        if: inputs.upload-artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: docker-image
+          path: ${{ env.PACKER_OUTPUT }}
+          retention-days: 1
