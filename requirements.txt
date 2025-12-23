@@ -1,4 +1,4 @@
 yamllint==1.37.1
 ansible==13.1.0
-ansible-lint==25.12.1
+ansible-lint==25.12.2
 passlib==1.7.4
