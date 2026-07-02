@@ -2,7 +2,7 @@
 python_version: "3.14.6"
 python_tools:
   - package: "ansible"
-    version: "13.1.0"
+    version: "14.1.0"
     install_scope: "system"
     venv_name: "ansible"
     executables:
