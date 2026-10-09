@@ -1,5 +1,5 @@
 ---
-python_version: "3.14.8"
+python_version: "3.15.0"
 python_tools:
   - package: "ansible"
     version: "13.1.0"
